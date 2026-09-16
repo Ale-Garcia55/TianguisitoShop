@@ -1,0 +1,47 @@
+name: Deploy Tianguisito Shop to Azure
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Preparar archivos del sitio
+        run: |
+          mkdir deploy
+          cp index.html deploy/
+          cp 404.html deploy/
+          cp -R css deploy/
+          cp -R js deploy/
+
+          if [ -d "img" ]; then
+            cp -R img deploy/
+          fi
+
+      - name: Limpiar sitio anterior en Azure
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az storage blob delete-batch \
+              --account-name tianguisitoshopweb01 \
+              --account-key "${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}" \
+              --source '$web'
+
+      - name: Publicar sitio en Azure
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az storage blob upload-batch \
+              --account-name tianguisitoshopweb01 \
+              --account-key "${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}" \
+              --destination '$web' \
+              --source deploy
