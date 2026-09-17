@@ -1,0 +1,47 @@
+name: Deploy Tianguisito Shop Sandbox
+
+on:
+  push:
+    branches:
+      - develop
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Preparar archivos del sitio
+        run: |
+          mkdir deploy
+          cp index.html deploy/
+          cp 404.html deploy/
+          cp -R css deploy/
+          cp -R js deploy/
+
+          if [ -d "img" ]; then
+            cp -R img deploy/
+          fi
+
+      - name: Limpiar sandbox anterior
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az storage blob delete-batch \
+              --account-name tianguisitoshopsbx01 \
+              --account-key "${{ secrets.AZURE_STORAGE_ACCOUNT_KEY_SANDBOX }}" \
+              --source '$web'
+
+      - name: Publicar en sandbox
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az storage blob upload-batch \
+              --account-name tianguisitoshopsbx01 \
+              --account-key "${{ secrets.AZURE_STORAGE_ACCOUNT_KEY_SANDBOX }}" \
+              --destination '$web' \
+              --source deploy
